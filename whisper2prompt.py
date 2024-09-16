@@ -46,7 +46,7 @@ language_code_list = [
     "vi", "yi", "yo", "zh", "yue",
     "auto"]
 
-def execute_asr(input_file, output_folder, model_size, language,precision):
+def execute_asr(input_files, output_folder, model_size, language,precision):
     model_path = f'faster-whisper-{model_size}'
     if not os.path.exists(model_path):
         model_path = model_size
@@ -58,31 +58,35 @@ def execute_asr(input_file, output_folder, model_size, language,precision):
         model = WhisperModel(model_path, device="cuda", compute_type=precision)
     except:
         return print(traceback.format_exc())
-    output = []
-    output_file_name = os.path.basename(input_file)
-    output_file_path = os.path.abspath(f'{output_folder}/{output_file_name}.json')
+    output_file_paths = []
+    for input_file in input_files:
+        output = []
+        output_file_name = os.path.basename(input_file)
+        output_file_path = os.path.abspath(f'{output_folder}/{output_file_name}.json')
 
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
+        if not os.path.exists(output_folder):
+            os.makedirs(output_folder)
 
-    file = input_file
-    try:
-        segments, info = model.transcribe(
-            audio          = file,
-            beam_size      = 5,
-            vad_filter     = True,
-            vad_parameters = dict(min_silence_duration_ms=700),
-            language       = language)
-        for segment in segments:
-            output.append(dict(name="Name",start=segment.start, end=segment.end,message=segment.text))
-    except:
-        return print(traceback.format_exc())
-        
-    import json
-    with open(output_file_path, "w", encoding="utf-8") as f:
-        json.dump(output, f, ensure_ascii=False)
-        print(f"ASR 任务完成->标注文件路径: {output_file_path}\n")
-    return output_file_path
+        file = input_file
+        try:
+            segments, info = model.transcribe(
+                audio          = file,
+                beam_size      = 5,
+                vad_filter     = True,
+                vad_parameters = dict(min_silence_duration_ms=700),
+                language       = language)
+            for segment in segments:
+                output.append(dict(name="Name",start=segment.start, end=segment.end,message=segment.text))
+        except:
+            return print(traceback.format_exc())
+            
+        import json
+        with open(output_file_path, "w", encoding="utf-8") as f:
+            json.dump(output, f, ensure_ascii=False)
+            print(f"ASR 任务完成->标注文件路径: {output_file_path}\n")
+        output_file_paths.append(output_file_path)
+    del model
+    return output_file_paths
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

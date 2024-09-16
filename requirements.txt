@@ -13,4 +13,5 @@ faster-whisper
 torch 
 gradio
 yt-dlp
+bilibili-dl
 --extra-index-url  https://download.pytorch.org/whl/cu121
