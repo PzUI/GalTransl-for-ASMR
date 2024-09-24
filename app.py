@@ -23,7 +23,9 @@ TRANSLATOR_SUPPORTED = [
     "none",
 ]
 
-def worker(input_files, yt_url, restore_symbol, save_path, model_size, translator, gpt_token, sakura_address, proxy_address, before_dict, gpt_dict, after_dict):
+def worker(input_files, yt_url, remove_adjacent_duplicates ,remove_short, restore_symbol, save_path, model_size, translator, gpt_token, sakura_address, proxy_address, before_dict, gpt_dict, after_dict):
+    if not input_files:
+        input_files = []
     output_files = []
     print("正在初始化项目文件夹...")
     if before_dict:
@@ -57,7 +59,7 @@ def worker(input_files, yt_url, restore_symbol, save_path, model_size, translato
             print("正在下载视频...")
             results = ydl.download([yt_url])
             print("视频下载完成！")
-        input_file = 'sampleProject/YoutubeDL.webm'
+        input_files += ['sampleProject/YoutubeDL.webm']
 
     elif yt_url and 'BV' in yt_url:
         from bilibili_dl.bilibili_dl.Video import Video
@@ -78,7 +80,9 @@ def worker(input_files, yt_url, restore_symbol, save_path, model_size, translato
         title = res['title'] if res['videos'] == 1 else res['pages'][0]['part']
         title = re.sub(r'[.:?/\\]', ' ', title).strip()
         title = re.sub(r'\s+', ' ', title)
-        input_file = f'{title}.mp4'      
+        os.makedirs('sampleProject/cache', exist_ok=True)
+        shutil.move(f'{title}.mp4', f'sampleProject/cache/{title}.mp4')
+        input_files += [f'sampleProject/cache/{title}.mp4']
     
     output_file_paths = []
     audio_files = []
@@ -106,15 +110,18 @@ def worker(input_files, yt_url, restore_symbol, save_path, model_size, translato
                 output_file_path = os.path.join('sampleProject/gt_input', os.path.basename(input_file).replace('.jp','').replace('.srt','.json'))
                 output_file_paths.append(output_file_path)
                 make_prompt(input_file, output_file_path)
+                if remove_adjacent_duplicates:
+                    from prompt2srt import remove_duplicates
+                    remove_duplicates(output_file_paths[-1], output_file_paths[-1])
+                if remove_short:
+                    from prompt2srt import remove_short_message
+                    remove_short_message(output_file_paths[-1], output_file_paths[-1], 5)
                 print("字幕转换完成！")
             elif input_file:
                 audio_files.append(input_file)
                 file_end = '.' + input_file.split('.')[-1]
                 files_end[input_file] = file_end
-                # os.makedirs('sampleProject/cache', exist_ok=True)
-                # if os.path.exists(os.path.join('sampleProject/cache', os.path.basename(input_file))):
-                #     os.remove(os.path.join('sampleProject/cache', os.path.basename(input_file)))
-                # input_file = shutil.move(input_file, 'sampleProject/cache/')
+
         if audio_files:
             print("正在进行语音识别...")
             from whisper2prompt import execute_asr
@@ -127,6 +134,14 @@ def worker(input_files, yt_url, restore_symbol, save_path, model_size, translato
             )
             output_file_paths += output_audio_paths
             print("语音识别完成！")
+
+    for output_file_path in output_file_paths:
+        if remove_adjacent_duplicates:
+            from prompt2srt import remove_duplicates
+            remove_duplicates(output_file_path, output_file_path)
+        if remove_short:
+            from prompt2srt import remove_short_message
+            remove_short_message(output_file_path, output_file_path, 5)
 
     if translator == 'none':
         print("无需进行翻译！")
@@ -145,9 +160,11 @@ def worker(input_files, yt_url, restore_symbol, save_path, model_size, translato
         input_file = input_file + temp_end
         print("字幕文件生成完成！")
         print("输入输出缓存地址为：", os.path.dirname(input_file))
-
-        if files_end[input_file] == '.mp4':
-            output_files.append(input_file+files_end[input_file])
+        
+        if files_end[input_file] == '.mp3' or files_end[input_file] == '.wav':
+            print("")
+        else:
+            output_files.append(input_file)
         if save_path:
             save_file(output_files, save_path)
         return output_files
@@ -226,11 +243,11 @@ def worker(input_files, yt_url, restore_symbol, save_path, model_size, translato
             input_file+'.jp.srt', 
             input_file+'.jp.lrc', 
         ]
-    input_file = input_file + temp_end
+    # input_file = input_file + temp_end
     print("字幕文件生成完成！")
     # print("缓存地址为：", input_file)
     try:
-        if files_end[input_file] == '.mp4':
+        if files_end[input_file] != '.mp3' or files_end[input_file] != '.wav' or files_end[input_file] != '.srt':
             output_files.append(input_file+files_end[input_file])
     finally:
         if save_path:
@@ -264,6 +281,17 @@ def save_file(files, save_path):
     except:
         print("保存文件失败！")
 
+def zip_files(output_files, endwith):
+    import zipfile
+    os.makedirs('sampleProject/cache', exist_ok=True)
+    with zipfile.ZipFile(f'sampleProject/cache/output_{endwith}.zip', 'w') as zipf:
+        for output_file in output_files:
+            if output_file.endswith(endwith):
+                if '.jp' in endwith and '.jp' in output_file:
+                    zipf.write(output_file, os.path.basename(output_file))
+                elif '.jp' not in endwith and '.jp' not in output_file:
+                    zipf.write(output_file, os.path.basename(output_file))
+    return f'sampleProject/cache/output_{endwith}.zip'
 
 with gr.Blocks() as demo:
     gr.Markdown("# 欢迎使用GalTransl for ASMR！")
@@ -295,12 +323,22 @@ with gr.Blocks() as demo:
         with gr.Column(scale=1,min_width=20):
             gr.Button("选择路径").click(select_path, inputs=[], outputs=save_path)
 
-    restore_symbol = gr.Checkbox(label="恢复进度")
+    remove_adjacent_duplicates = gr.Checkbox(label="去除相邻重复")
+    remove_short = gr.Checkbox(label="去除短句（建议下载.jp.srt手动去除）")
+    restore_symbol = gr.Checkbox(label="恢复进度（在已经进行语音识别的情况下使用）")
     run = gr.Button("9. 运行（状态详情请见命令行）")
     outputs = gr.Files(label="输出文件")
+
+    output_zip_file = gr.File(label="打包输出文件")
+
+    with gr.Row():
+        gr.Button("打包下载srt").click(zip_files, inputs=[outputs, gr.Textbox(value='.srt', visible=False)],outputs=output_zip_file)
+        gr.Button("打包下载lrc").click(zip_files, inputs=[outputs, gr.Textbox(value='.lrc', visible=False)],outputs=output_zip_file)
+        gr.Button("打包下载jp.srt").click(zip_files, inputs=[outputs, gr.Textbox(value='.jp.srt', visible=False)],outputs=output_zip_file)
+        gr.Button("打包下载jp.lrc").click(zip_files, inputs=[outputs, gr.Textbox(value='.jp.lrc', visible=False)],outputs=output_zip_file)
     clean = gr.Button("10.清空输入输出缓存（请在使用完成后点击）")
 
-    run.click(worker, inputs=[input_files, yt_url, restore_symbol, save_path, model_size, translator, gpt_token, sakura_address, proxy_address, before_dict, gpt_dict, after_dict], outputs=outputs, queue=True)
+    run.click(worker, inputs=[input_files, yt_url, remove_adjacent_duplicates, remove_short, restore_symbol, save_path, model_size, translator, gpt_token, sakura_address, proxy_address, before_dict, gpt_dict, after_dict], outputs=outputs, queue=True)
     clean.click(cleaner, inputs=[],outputs=outputs)
 
 demo.queue().launch(inbrowser=False, server_name='0.0.0.0')

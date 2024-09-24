@@ -33,6 +33,29 @@ def make_lrc(input_file, output_file):
         for i, d in enumerate(data):
             print("["+format_result_lrc(d["start"])+"] "+d["message"], file=f)
         
+def remove_duplicates(input_file, output_file):
+    with open(input_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    result = []
+    prev_message = None
+
+    for item in data:
+        if item['message'] != prev_message:
+            result.append(item)
+        prev_message = item['message']
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(result, f, ensure_ascii=False, indent=4)
+
+def remove_short_message(input_file, output_file, min_message_length=10):
+    with open(input_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    result = [item for item in data if len(item['message']) >= min_message_length]
+
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(result, f, ensure_ascii=False, indent=4)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
