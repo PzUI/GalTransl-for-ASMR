@@ -173,60 +173,60 @@ def worker(input_files, yt_url, remove_adjacent_duplicates ,remove_short, restor
     with open('sampleProject/config.yaml', 'r', encoding='utf-8') as f:
         lines = f.readlines()
 
-    for idx, line in enumerate(lines):
-        if 'gpt' in translator and gpt_token:
-            if 'GPT35' in line:
-                lines[idx+2] = f"      - token: {gpt_token}\n"
-                lines[idx+6] = f"    defaultEndpoint: https://api.openai.com\n"
-                lines[idx+7] = f'    rewriteModelName: ""\n'
-            if 'GPT4' in line:
-                lines[idx+2] = f"      - token: {gpt_token}\n"
-        if 'moonshot' in translator and gpt_token:
-            if 'GPT35' in line:
-                lines[idx+4] = f"      - token: {gpt_token}\n"
-                lines[idx+6] = f"    defaultEndpoint: https://api.moonshot.cn\n"
-                lines[idx+7] = f'    rewriteModelName: "moonshot-v1-8k"\n'
-        if 'qwen' in translator and gpt_token:
-            if 'GPT35' in line:
-                lines[idx+4] = f"      - token: {gpt_token}\n"
-                lines[idx+6] = f"    defaultEndpoint: https://dashscope.aliyuncs.com/compatible-mode\n"
-                lines[idx+7] = f'    rewriteModelName: "{translator}"\n'
-        if 'glm' in translator and gpt_token:
-            if 'GPT35' in line:
-                lines[idx+4] = f"      - token: {gpt_token}\n"
-                lines[idx+6] = f"    defaultEndpoint: https://open.bigmodel.cn/api/paas\n"
-                lines[idx+7] = f'    rewriteModelName: "{translator}"\n'
-        if 'abab' in translator and gpt_token:
-            if 'GPT35' in line:
-                lines[idx+4] = f"      - token: {gpt_token}\n"
-                lines[idx+6] = f"    defaultEndpoint: https://api.minimax.chat\n"
-                lines[idx+7] = f'    rewriteModelName: "{translator}"\n'
-        if ('sakura' in translator or 'index' in translator or 'Galtransl' in translator) and sakura_address:
-            if 'Sakura' in line:
-                lines[idx+1] = f"    endpoint: {sakura_address}\n"
-        if proxy_address:
-            if 'proxy' in line:
-                lines[idx+1] = f"  enableProxy: true\n"
-                lines[idx+3] = f"    - address: {proxy_address}\n"
-        else:
-            if 'proxy' in line:
-                lines[idx+1] = f"  enableProxy: false\n"
+        for idx, line in enumerate(lines):
+            if 'gpt' in translator and gpt_token:
+                if 'GPT35' in line:
+                    lines[idx+2] = f"      - token: {gpt_token}\n"
+                    lines[idx+6] = f"    defaultEndpoint: https://api.openai.com\n"
+                    lines[idx+7] = f'    rewriteModelName: ""\n'
+                if 'GPT4' in line:
+                    lines[idx+2] = f"      - token: {gpt_token}\n"
+            if 'moonshot' in translator and gpt_token:
+                if 'GPT35' in line:
+                    lines[idx+4] = f"      - token: {gpt_token}\n"
+                    lines[idx+6] = f"    defaultEndpoint: https://api.moonshot.cn\n"
+                    lines[idx+7] = f'    rewriteModelName: "moonshot-v1-8k"\n'
+            if 'qwen' in translator and gpt_token:
+                if 'GPT35' in line:
+                    lines[idx+4] = f"      - token: {gpt_token}\n"
+                    lines[idx+6] = f"    defaultEndpoint: https://dashscope.aliyuncs.com/compatible-mode\n"
+                    lines[idx+7] = f'    rewriteModelName: "{translator}"\n'
+            if 'glm' in translator and gpt_token:
+                if 'GPT35' in line:
+                    lines[idx+4] = f"      - token: {gpt_token}\n"
+                    lines[idx+6] = f"    defaultEndpoint: https://open.bigmodel.cn/api/paas\n"
+                    lines[idx+7] = f'    rewriteModelName: "{translator}"\n'
+            if 'abab' in translator and gpt_token:
+                if 'GPT35' in line:
+                    lines[idx+4] = f"      - token: {gpt_token}\n"
+                    lines[idx+6] = f"    defaultEndpoint: https://api.minimax.chat\n"
+                    lines[idx+7] = f'    rewriteModelName: "{translator}"\n'
+            if ('sakura' in translator or 'index' in translator or 'Galtransl' in translator) and sakura_address:
+                if 'Sakura' in line:
+                    lines[idx+1] = f"    endpoint: {sakura_address}\n"
+            if proxy_address:
+                if 'proxy' in line:
+                    lines[idx+1] = f"  enableProxy: true\n"
+                    lines[idx+3] = f"    - address: {proxy_address}\n"
+            else:
+                if 'proxy' in line:
+                    lines[idx+1] = f"  enableProxy: false\n"
 
-    if 'moonshot' in translator or 'qwen' in translator or 'glm' in translator or 'abab' in translator:
-        translator = 'gpt35-0613'
-    
-    if 'index' in translator:
-        translator = 'sakura-009'
+        if 'moonshot' in translator or 'qwen' in translator or 'glm' in translator or 'abab' in translator:
+            translator = 'gpt35-0613'
+        
+        if 'index' in translator:
+            translator = 'sakura-009'
 
-    if 'Galtransl' in translator:
-        translator = 'sakura-010'
+        if 'Galtransl' in translator:
+            translator = 'sakura-010'
 
-    with open('sampleProject/config.yaml', 'w', encoding='utf-8') as f:
-        f.writelines(lines)
+        with open('sampleProject/config.yaml', 'w', encoding='utf-8') as f:
+            f.writelines(lines)
 
-    print("正在进行翻译...")
-    from GalTransl.__main__ import worker
-    worker('sampleProject', 'config.yaml', translator, show_banner=False)
+        print("正在进行翻译...")
+        from GalTransl.__main__ import worker
+        worker('sampleProject', 'config.yaml', translator, show_banner=False)
 
     print("正在生成字幕文件...")
     from prompt2srt import make_srt, make_lrc
