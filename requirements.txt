@@ -10,7 +10,7 @@ tiktoken
 tqdm
 colorlog
 faster-whisper
-torch 
+torch==2.3.1
 gradio
 yt-dlp
 bilibili-dl
